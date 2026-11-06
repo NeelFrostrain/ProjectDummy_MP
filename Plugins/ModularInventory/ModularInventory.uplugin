@@ -1,0 +1,19 @@
+{
+  "FileVersion": 3,
+  "Version": 2,
+  "VersionName": "2.0.0",
+  "FriendlyName": "Modular Inventory",
+  "Description": "One generic, server-authoritative Item Container component. Use it for backpacks, hotbars, chests, equipment slots, shops - anything that holds items.",
+  "Category": "Gameplay",
+  "CreatedBy": "",
+  "CanContainContent": true,
+  "IsBetaVersion": true,
+  "EnabledByDefault": true,
+  "Modules": [
+    {
+      "Name": "ModularInventory",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    }
+  ]
+}

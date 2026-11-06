@@ -1,0 +1,39 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "1.0.0",
+  "FriendlyName": "Multiplayer Utility",
+  "Description": "Production-grade networking utilities, execution macro nodes, RPC validation, lag compensation, net LOD, and network diagnostics for Unreal Engine 5.",
+  "Category": "Networking",
+  "CreatedBy": "OpenAI",
+  "CanContainContent": true,
+  "IsBetaVersion": false,
+  "EnabledByDefault": true,
+  "Modules": [
+    {
+      "Name": "MPUtilityRuntime",
+      "Type": "Runtime",
+      "LoadingPhase": "PreDefault"
+    },
+    {
+      "Name": "MPUtilityTests",
+      "Type": "Editor",
+      "LoadingPhase": "Default"
+    },
+    {
+      "Name": "MPUtilityEditor",
+      "Type": "Editor",
+      "LoadingPhase": "Default"
+    }
+  ],
+  "Plugins": [
+    {
+      "Name": "OnlineSubsystem",
+      "Enabled": true
+    },
+    {
+      "Name": "OnlineSubsystemUtils",
+      "Enabled": true
+    }
+  ]
+}

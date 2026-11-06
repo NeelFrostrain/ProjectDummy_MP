@@ -1,0 +1,25 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "1.0.0",
+  "FriendlyName": "Multiplayer Inventory",
+  "Description": "Server-authoritative grid inventory with a separate hotbar and Fast Array replication.",
+  "Category": "Gameplay",
+  "CreatedBy": "OpenAI",
+  "CanContainContent": true,
+  "IsBetaVersion": true,
+  "EnabledByDefault": true,
+  "Modules": [
+    {
+      "Name": "MultiplayerInventory",
+      "Type": "Runtime",
+      "LoadingPhase": "PreDefault"
+    }
+  ],
+  "Plugins": [
+    {
+      "Name": "GameplayAbilities",
+      "Enabled": true
+    }
+  ]
+}
