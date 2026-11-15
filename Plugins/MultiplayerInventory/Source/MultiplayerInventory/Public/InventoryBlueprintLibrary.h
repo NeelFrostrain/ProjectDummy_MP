@@ -63,10 +63,13 @@ public:
 
     // --- Standard Inventory Event Gameplay Tags ---
     UFUNCTION(BlueprintPure, Category="Inventory|Events")
-    static FGameplayTag GetEventTag_Equipped();
+    static FGameplayTag GetEventTag_Selected();
 
     UFUNCTION(BlueprintPure, Category="Inventory|Events")
-    static FGameplayTag GetEventTag_Unequipped();
+    static FGameplayTag GetEventTag_Unselected();
+
+    UFUNCTION(BlueprintPure, Category="Inventory|Events")
+    static FGameplayTag GetEventTag_PickedUp();
 
     UFUNCTION(BlueprintPure, Category="Inventory|Events")
     static FGameplayTag GetEventTag_Dropped();
@@ -79,6 +82,13 @@ public:
 
     UFUNCTION(BlueprintPure, Category="Inventory|Events")
     static FGameplayTag GetEventTag_Used();
+
+    // Backward-compatible tag getters
+    UFUNCTION(BlueprintPure, Category="Inventory|Events")
+    static FGameplayTag GetEventTag_Equipped();
+
+    UFUNCTION(BlueprintPure, Category="Inventory|Events")
+    static FGameplayTag GetEventTag_Unequipped();
 
     UFUNCTION(BlueprintPure, Category="Inventory|Events")
     static FGameplayTag GetEventTag_Consumed();

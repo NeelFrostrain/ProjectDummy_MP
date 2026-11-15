@@ -134,51 +134,32 @@ Override these functions in your Ability Blueprint graph:
 
 ---
 
-## Unified Event Dispatcher (`OnItemEvent`)
+## Dedicated Event Dispatchers
 
-Instead of multiple separate delegates cluttering the Details panel, all inventory state changes broadcast through a single unified dispatcher:
+The component provides clean, dedicated event dispatchers in the Details panel so you can bind directly to specific actions without needing to filter through every event:
 
-```cpp
-OnItemEvent(
-    FGameplayTag EventTag,
-    UInventoryItemData* ItemData,
-    int32 Quantity,
-    EInventoryContainer Container,
-    int32 SlotIndex,
-    const FGameplayTagContainer& ItemTags,
-    AActor* RelatedActor
-);
-```
+All dispatchers share the **exact same 6 pins**:
+- **`ItemData`** (`UInventoryItemData*`): The item definition asset.
+- **`Quantity`** (`int32`): The number of items involved.
+- **`Container`** (`EInventoryContainer`): Hotbar or Inventory.
+- **`SlotIndex`** (`int32`): The slot index where the action took place.
+- **`ItemTags`** (`FGameplayTagContainer`): Tags defined on the item (e.g. Weapon, Potion).
+- **`RelatedActor`** (`AActor*`): Related actor (e.g. the world pickup item actor, or the player).
 
-### Standard Event Tags
-The plugin provides Native Gameplay Tags in namespace `InventoryItemEventTags` (and Blueprint library getters in `UInventoryBlueprintLibrary`):
+| Event Dispatcher | Description | RelatedActor Pin |
+|---|---|---|
+| **`OnItemSelected`** | Fired when an item in the hotbar is selected | Player Pawn |
+| **`OnItemUnselected`** | Fired when an item in the hotbar is unselected | Player Pawn |
+| **`OnItemUsed`** | Fired when an item's ability or action is executed/used | Player Pawn |
+| **`OnItemPickedUp`** | Fired when an item is picked up from the world | The `AWorldInventoryItem` actor |
+| **`OnItemDropped`** | Fired when an item is dropped into the world | The spawned `AWorldInventoryItem` actor |
+| **`OnItemAdded`** | Fired whenever items enter any container | Player Pawn |
+| **`OnItemRemoved`** | Fired whenever items are removed from any container | Player Pawn |
 
-| Event Tag | Library Node | Description | RelatedActor |
-|---|---|---|---|
-| `Inventory.Event.Equipped` | `GetEventTag_Equipped` | Item selected/equipped in hotbar | `nullptr` |
-| `Inventory.Event.Unequipped` | `GetEventTag_Unequipped` | Item unselected/unequipped | `nullptr` |
-| `Inventory.Event.Dropped` | `GetEventTag_Dropped` | Item dropped into the world | Spawned `AWorldInventoryItem` |
-| `Inventory.Event.Added` | `GetEventTag_Added` | Item added to a container | `nullptr` |
-| `Inventory.Event.Removed` | `GetEventTag_Removed` | Item removed from a container | `nullptr` |
-| `Inventory.Event.Used` | `GetEventTag_Used` | Item ability executed/used | `nullptr` |
-| `Inventory.Event.Consumed` | `GetEventTag_Consumed` | Item stack quantity decremented | `nullptr` |
-
-### Blueprint Event Handling Pattern
-1. Bind to **`OnItemEvent`** on your `UInventoryComponent`.
-2. Connect `EventTag` to a **Switch on Gameplay Tag** node.
-3. Add the cases (`Inventory.Event.Equipped`, `Inventory.Event.Dropped`, etc.).
-4. Use `ItemTags` to inspect the item type (e.g. `Has Tag: Item.Type.Weapon`).
-
-```
-[OnItemEvent]
-     │
-     ├── EventTag ────────► [Switch on Gameplay Tag]
-     │                           ├── Inventory.Event.Equipped ──► (Attach Weapon Mesh)
-     │                           ├── Inventory.Event.Unequipped ─► (Detach Mesh)
-     │                           ├── Inventory.Event.Dropped ────► (Play Drop SFX)
-     │                           └── Inventory.Event.Consumed ───► (Update HUD Counter)
-     └── ItemTags ────────► [Has Tag: Item.Type.Weapon]
-```
+> [!NOTE]
+> **Unified `OnItemEvent`**: The component also provides `OnItemEvent(EventTag, ItemData, Quantity, Container, SlotIndex, ItemTags, RelatedActor)` if you prefer handling all events through a single node with "Switch on Gameplay Tag".
+> 
+> **Clean Terminology**: "Equip", "Unequip", and "Consume" have been replaced with modular **Select**, **Unselect**, and **Use** (plus **Pick** and **Drop**), keeping the inventory pure and decoupling cosmetic sockets or weapon logic into your own event handlers or abilities.
 
 ---
 

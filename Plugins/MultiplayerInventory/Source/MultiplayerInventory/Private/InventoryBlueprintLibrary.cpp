@@ -142,10 +142,13 @@ TArray<UInventorySlotWidget*> UInventoryBlueprintLibrary::SetupSlotWidgets(UInve
     return InWidgets;
 }
 
-FGameplayTag UInventoryBlueprintLibrary::GetEventTag_Equipped() { return InventoryItemEventTags::Equipped.GetTag(); }
-FGameplayTag UInventoryBlueprintLibrary::GetEventTag_Unequipped() { return InventoryItemEventTags::Unequipped.GetTag(); }
+FGameplayTag UInventoryBlueprintLibrary::GetEventTag_Selected() { return InventoryItemEventTags::Selected.GetTag(); }
+FGameplayTag UInventoryBlueprintLibrary::GetEventTag_Unselected() { return InventoryItemEventTags::Unselected.GetTag(); }
+FGameplayTag UInventoryBlueprintLibrary::GetEventTag_PickedUp() { return InventoryItemEventTags::PickedUp.GetTag(); }
 FGameplayTag UInventoryBlueprintLibrary::GetEventTag_Dropped() { return InventoryItemEventTags::Dropped.GetTag(); }
 FGameplayTag UInventoryBlueprintLibrary::GetEventTag_Added() { return InventoryItemEventTags::Added.GetTag(); }
 FGameplayTag UInventoryBlueprintLibrary::GetEventTag_Removed() { return InventoryItemEventTags::Removed.GetTag(); }
 FGameplayTag UInventoryBlueprintLibrary::GetEventTag_Used() { return InventoryItemEventTags::Used.GetTag(); }
+FGameplayTag UInventoryBlueprintLibrary::GetEventTag_Equipped() { return InventoryItemEventTags::Equipped.GetTag(); }
+FGameplayTag UInventoryBlueprintLibrary::GetEventTag_Unequipped() { return InventoryItemEventTags::Unequipped.GetTag(); }
 FGameplayTag UInventoryBlueprintLibrary::GetEventTag_Consumed() { return InventoryItemEventTags::Consumed.GetTag(); }

@@ -26,12 +26,15 @@
       "Enabled": true
     },
     {
-      "Name": "MultiplayerUtility",
-      "Enabled": true
-    },
-    {
       "Name": "GameplayAbilities",
       "Enabled": true
+    }
+  ],
+  "Modules": [
+    {
+      "Name": "ProjectDummy_MP",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
     }
   ]
 }

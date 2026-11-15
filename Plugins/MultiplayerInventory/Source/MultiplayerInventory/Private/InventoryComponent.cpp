@@ -18,13 +18,18 @@
 
 namespace InventoryItemEventTags
 {
-    UE_DEFINE_GAMEPLAY_TAG_COMMENT(Equipped, "Inventory.Event.Equipped", "Fired when an item is selected/equipped in the hotbar");
-    UE_DEFINE_GAMEPLAY_TAG_COMMENT(Unequipped, "Inventory.Event.Unequipped", "Fired when an item is unselected/unequipped from the hotbar");
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(Selected, "Inventory.Event.Selected", "Fired when an item is selected in the hotbar");
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(Unselected, "Inventory.Event.Unselected", "Fired when an item is unselected from the hotbar");
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(Used, "Inventory.Event.Used", "Fired when an item is used/executed");
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(PickedUp, "Inventory.Event.PickedUp", "Fired when an item is picked up from the world");
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(Dropped, "Inventory.Event.Dropped", "Fired when an item is dropped into the world");
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(Added, "Inventory.Event.Added", "Fired when an item is added to a container");
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(Removed, "Inventory.Event.Removed", "Fired when an item is removed from a container");
-    UE_DEFINE_GAMEPLAY_TAG_COMMENT(Used, "Inventory.Event.Used", "Fired when an item is used/executed");
-    UE_DEFINE_GAMEPLAY_TAG_COMMENT(Consumed, "Inventory.Event.Consumed", "Fired when an item is consumed/decremented");
+
+    // Aliases for backward compatibility
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(Equipped, "Inventory.Event.Equipped", "Alias for Selected");
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(Unequipped, "Inventory.Event.Unequipped", "Alias for Unselected");
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(Consumed, "Inventory.Event.Consumed", "Alias for Used/Removed");
 }
 
 void FInventoryArray::PostReplicatedAdd(const TArrayView<int32>&, int32) { if (OwnerComponent) OwnerComponent->NotifyInventoryChanged(); }
@@ -412,7 +417,40 @@ void UInventoryComponent::BroadcastItemEvent(
     AActor* InRelatedActor)
 {
     const FGameplayTagContainer Tags = InItemData ? InItemData->ItemTags : FGameplayTagContainer::EmptyContainer;
+
+    // 1. Unified dispatcher (all events)
     OnItemEvent.Broadcast(EventTag, InItemData, InQuantity, InContainer, InSlotIndex, Tags, InRelatedActor);
+
+    // 2. Specific dispatchers with identical parameters
+    if (EventTag == InventoryItemEventTags::Selected || EventTag == InventoryItemEventTags::Equipped)
+    {
+        OnItemSelected.Broadcast(InItemData, InQuantity, InContainer, InSlotIndex, Tags, InRelatedActor);
+    }
+    else if (EventTag == InventoryItemEventTags::Unselected || EventTag == InventoryItemEventTags::Unequipped)
+    {
+        OnItemUnselected.Broadcast(InItemData, InQuantity, InContainer, InSlotIndex, Tags, InRelatedActor);
+    }
+    else if (EventTag == InventoryItemEventTags::Used)
+    {
+        OnItemUsed.Broadcast(InItemData, InQuantity, InContainer, InSlotIndex, Tags, InRelatedActor);
+    }
+    else if (EventTag == InventoryItemEventTags::PickedUp)
+    {
+        OnItemPickedUp.Broadcast(InItemData, InQuantity, InContainer, InSlotIndex, Tags, InRelatedActor);
+        OnItemAdded.Broadcast(InItemData, InQuantity, InContainer, InSlotIndex, Tags, InRelatedActor);
+    }
+    else if (EventTag == InventoryItemEventTags::Dropped)
+    {
+        OnItemDropped.Broadcast(InItemData, InQuantity, InContainer, InSlotIndex, Tags, InRelatedActor);
+    }
+    else if (EventTag == InventoryItemEventTags::Added)
+    {
+        OnItemAdded.Broadcast(InItemData, InQuantity, InContainer, InSlotIndex, Tags, InRelatedActor);
+    }
+    else if (EventTag == InventoryItemEventTags::Removed)
+    {
+        OnItemRemoved.Broadcast(InItemData, InQuantity, InContainer, InSlotIndex, Tags, InRelatedActor);
+    }
 }
 
 void UInventoryComponent::OnRep_SelectedHotbarIndex()
@@ -420,24 +458,24 @@ void UInventoryComponent::OnRep_SelectedHotbarIndex()
     OnHotbarSelectionChanged.Broadcast(SelectedHotbarIndex);
     NotifyInventoryChanged();
 
-    // On simulated/autonomous clients, broadcast equipped/unequipped events locally for cosmetic attachment / UI
+    // On simulated/autonomous clients, broadcast selected/unselected events locally for cosmetic attachment / UI
     if (GetOwner() && !GetOwner()->HasAuthority())
     {
         const FInventorySlot* Slot = FindSlot(EInventoryContainer::Hotbar, SelectedHotbarIndex);
         UInventoryItemData* NewItemData = (Slot && Slot->Quantity > 0) ? Slot->ItemData.Get() : nullptr;
 
-        if (LastEquippedItemData && (LastEquippedItemData != NewItemData || LastEquippedSlotIndex != SelectedHotbarIndex))
+        if (LastSelectedItemData && (LastSelectedItemData != NewItemData || LastSelectedSlotIndex != SelectedHotbarIndex))
         {
-            BroadcastItemEvent(InventoryItemEventTags::Unequipped, LastEquippedItemData, 1, EInventoryContainer::Hotbar, LastEquippedSlotIndex, GetOwner());
-            LastEquippedItemData = nullptr;
-            LastEquippedSlotIndex = INDEX_NONE;
+            BroadcastItemEvent(InventoryItemEventTags::Unselected, LastSelectedItemData, 1, EInventoryContainer::Hotbar, LastSelectedSlotIndex, GetOwner());
+            LastSelectedItemData = nullptr;
+            LastSelectedSlotIndex = INDEX_NONE;
         }
 
-        if (NewItemData && (LastEquippedItemData != NewItemData || LastEquippedSlotIndex != SelectedHotbarIndex))
+        if (NewItemData && (LastSelectedItemData != NewItemData || LastSelectedSlotIndex != SelectedHotbarIndex))
         {
-            LastEquippedItemData = NewItemData;
-            LastEquippedSlotIndex = SelectedHotbarIndex;
-            BroadcastItemEvent(InventoryItemEventTags::Equipped, NewItemData, 1, EInventoryContainer::Hotbar, SelectedHotbarIndex, GetOwner());
+            LastSelectedItemData = NewItemData;
+            LastSelectedSlotIndex = SelectedHotbarIndex;
+            BroadcastItemEvent(InventoryItemEventTags::Selected, NewItemData, 1, EInventoryContainer::Hotbar, SelectedHotbarIndex, GetOwner());
         }
     }
 }
@@ -485,7 +523,7 @@ UAbilitySystemComponent* UInventoryComponent::GetOwnerAbilitySystemComponent() c
 
 // --- Query Functions for Item Usage ---
 
-bool UInventoryComponent::CanEquipItem(UInventoryItemData* ItemData) const
+bool UInventoryComponent::CanSelectItem(UInventoryItemData* ItemData) const
 {
     if (!ItemData) return false;
     if (!ItemData->AbilityClass) return true;
@@ -496,7 +534,7 @@ bool UInventoryComponent::CanEquipItem(UInventoryItemData* ItemData) const
 
 bool UInventoryComponent::CanUseItem(UInventoryItemData* ItemData) const
 {
-    return ItemData && ItemData->AbilityClass && CanEquipItem(ItemData);
+    return ItemData && ItemData->AbilityClass && CanSelectItem(ItemData);
 }
 
 bool UInventoryComponent::CanUseSelectedHotbarItem() const
@@ -524,41 +562,41 @@ void UInventoryComponent::UpdateActiveHotbarAbility()
     const FInventorySlot* Slot = FindSlot(EInventoryContainer::Hotbar, SelectedHotbarIndex);
     UInventoryItemData* NewItemData = (Slot && Slot->Quantity > 0) ? Slot->ItemData.Get() : nullptr;
 
-    // 1. Check if unequip is needed for previous item
-    if (LastEquippedItemData && (LastEquippedItemData != NewItemData || LastEquippedSlotIndex != SelectedHotbarIndex))
+    // 1. Check if unselect is needed for previous item
+    if (LastSelectedItemData && (LastSelectedItemData != NewItemData || LastSelectedSlotIndex != SelectedHotbarIndex))
     {
-        UInventoryItemData* OldItem = LastEquippedItemData;
-        const int32 OldSlot = LastEquippedSlotIndex;
+        UInventoryItemData* OldItem = LastSelectedItemData;
+        const int32 OldSlot = LastSelectedSlotIndex;
         const FGameplayTagContainer OldTags = OldItem->ItemTags;
-        LastEquippedItemData = nullptr;
-        LastEquippedSlotIndex = INDEX_NONE;
+        LastSelectedItemData = nullptr;
+        LastSelectedSlotIndex = INDEX_NONE;
 
-        if (ActiveEquippedAbilityHandle.IsValid())
+        if (ActiveSelectedAbilityHandle.IsValid())
         {
             if (OwnerASC)
             {
-                if (FGameplayAbilitySpec* CurrentSpec = OwnerASC->FindAbilitySpecFromHandle(ActiveEquippedAbilityHandle))
+                if (FGameplayAbilitySpec* CurrentSpec = OwnerASC->FindAbilitySpecFromHandle(ActiveSelectedAbilityHandle))
                 {
                     if (UInventoryItemGameplayAbility* PrevAbility = Cast<UInventoryItemGameplayAbility>(CurrentSpec->GetPrimaryInstance()))
                     {
                         PrevAbility->OnItemUnselected(OldItem, OldTags);
                     }
                 }
-                OwnerASC->CancelAbilityHandle(ActiveEquippedAbilityHandle);
+                OwnerASC->CancelAbilityHandle(ActiveSelectedAbilityHandle);
             }
-            ActiveEquippedAbilityHandle = FGameplayAbilitySpecHandle();
+            ActiveSelectedAbilityHandle = FGameplayAbilitySpecHandle();
         }
 
-        BroadcastItemEvent(InventoryItemEventTags::Unequipped, OldItem, 1, EInventoryContainer::Hotbar, OldSlot, GetOwner());
+        BroadcastItemEvent(InventoryItemEventTags::Unselected, OldItem, 1, EInventoryContainer::Hotbar, OldSlot, GetOwner());
     }
 
-    // 2. If new slot has an item that can be equipped
-    if (NewItemData && CanEquipItem(NewItemData))
+    // 2. If new slot has an item that can be selected
+    if (NewItemData && CanSelectItem(NewItemData))
     {
-        if (LastEquippedItemData != NewItemData || LastEquippedSlotIndex != SelectedHotbarIndex)
+        if (LastSelectedItemData != NewItemData || LastSelectedSlotIndex != SelectedHotbarIndex)
         {
-            LastEquippedItemData = NewItemData;
-            LastEquippedSlotIndex = SelectedHotbarIndex;
+            LastSelectedItemData = NewItemData;
+            LastSelectedSlotIndex = SelectedHotbarIndex;
 
             if (NewItemData->AbilityClass && OwnerASC)
             {
@@ -571,30 +609,30 @@ void UInventoryComponent::UpdateActiveHotbarAbility()
                     NewAbility->SourceContainer = EInventoryContainer::Hotbar;
                     NewAbility->SourceSlotIndex = SelectedHotbarIndex;
 
-                    ActiveEquippedAbilityHandle = NewHandle;
+                    ActiveSelectedAbilityHandle = NewHandle;
 
                     // Activate ability upon selecting item
                     OwnerASC->TryActivateAbility(NewHandle);
-                    const bool bEquipSuccess = NewAbility->OnItemSelected(NewItemData, NewItemData->ItemTags);
-                    if (bEquipSuccess)
+                    const bool bSelectSuccess = NewAbility->OnItemSelected(NewItemData, NewItemData->ItemTags);
+                    if (bSelectSuccess)
                     {
-                        BroadcastItemEvent(InventoryItemEventTags::Equipped, NewItemData, 1, EInventoryContainer::Hotbar, SelectedHotbarIndex, GetOwner());
+                        BroadcastItemEvent(InventoryItemEventTags::Selected, NewItemData, 1, EInventoryContainer::Hotbar, SelectedHotbarIndex, GetOwner());
                     }
                 }
             }
             else
             {
-                BroadcastItemEvent(InventoryItemEventTags::Equipped, NewItemData, 1, EInventoryContainer::Hotbar, SelectedHotbarIndex, GetOwner());
+                BroadcastItemEvent(InventoryItemEventTags::Selected, NewItemData, 1, EInventoryContainer::Hotbar, SelectedHotbarIndex, GetOwner());
             }
         }
-        else if (ActiveEquippedAbilityHandle.IsValid() && OwnerASC)
+        else if (ActiveSelectedAbilityHandle.IsValid() && OwnerASC)
         {
-            // Same item already equipped, ensure ability is active
-            if (FGameplayAbilitySpec* Spec = OwnerASC->FindAbilitySpecFromHandle(ActiveEquippedAbilityHandle))
+            // Same item already selected, ensure ability is active
+            if (FGameplayAbilitySpec* Spec = OwnerASC->FindAbilitySpecFromHandle(ActiveSelectedAbilityHandle))
             {
                 if (!Spec->IsActive())
                 {
-                    OwnerASC->TryActivateAbility(ActiveEquippedAbilityHandle);
+                    OwnerASC->TryActivateAbility(ActiveSelectedAbilityHandle);
                 }
             }
         }
@@ -700,12 +738,7 @@ bool UInventoryComponent::ConsumeSlotItem(EInventoryContainer Container, int32 S
     NotifyInventoryChanged();
 
     AActor* OwnerActor = GetOwner();
-    BP_OnConsumeInventoryItem(ItemData, DeductAmount, RemainingQuantity, OwnerActor);
-    BroadcastItemEvent(InventoryItemEventTags::Consumed, ItemData, DeductAmount, Container, SlotIndex, OwnerActor);
-    if (RemainingQuantity <= 0)
-    {
-        BroadcastItemEvent(InventoryItemEventTags::Removed, ItemData, DeductAmount, Container, SlotIndex, OwnerActor);
-    }
+    BroadcastItemEvent(InventoryItemEventTags::Removed, ItemData, DeductAmount, Container, SlotIndex, OwnerActor);
     return true;
 }
 
@@ -1208,6 +1241,7 @@ void UInventoryComponent::Server_TryPickupActor_Implementation(AActor* TargetAct
     if (Taken > 0)
     {
         WorldItem->TakeQuantity(Taken);
+        BroadcastItemEvent(InventoryItemEventTags::PickedUp, WorldItem->ItemData, Taken, EInventoryContainer::Hotbar, INDEX_NONE, WorldItem);
     }
 }
 
@@ -1513,7 +1547,7 @@ bool UInventoryComponent::RequestSelectHotbar(int32 Index)
     const int32 Count = GetSlotCount(EInventoryContainer::Hotbar);
     if (!GetOwner() || Index < 0 || Index >= Count) return false;
     const FInventorySlot* Slot = FindSlot(EInventoryContainer::Hotbar, Index);
-    if (Slot && Slot->ItemData && !CanEquipItem(Slot->ItemData)) return false;
+    if (Slot && Slot->ItemData && !CanSelectItem(Slot->ItemData)) return false;
     Server_RequestSelectHotbar(Index);
     return true;
 }
@@ -1524,7 +1558,7 @@ void UInventoryComponent::Server_RequestSelectHotbar_Implementation(int32 Index)
     if (Index >= 0 && Index < Count)
     {
         const FInventorySlot* Slot = FindSlot(EInventoryContainer::Hotbar, Index);
-        if (Slot && Slot->ItemData && !CanEquipItem(Slot->ItemData)) return;
+        if (Slot && Slot->ItemData && !CanSelectItem(Slot->ItemData)) return;
         if (SelectedHotbarIndex == Index) return;
         SelectedHotbarIndex = Index;
         OnRep_SelectedHotbarIndex();

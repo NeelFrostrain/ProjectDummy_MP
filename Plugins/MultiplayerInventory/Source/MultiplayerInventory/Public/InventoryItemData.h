@@ -29,6 +29,12 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Item")
     FText DisplayName;
 
+    //UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Socket")
+    //FName SocketName = NAME_None;
+    
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Socket")
+    FTransform SocketOffset = FTransform::Identity;
+
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Item", meta=(MultiLine=true))
     FText Description;
 

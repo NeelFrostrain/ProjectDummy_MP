@@ -10,12 +10,17 @@
 
 namespace InventoryItemEventTags
 {
-    UE_DECLARE_GAMEPLAY_TAG_EXTERN(Equipped);
-    UE_DECLARE_GAMEPLAY_TAG_EXTERN(Unequipped);
+    UE_DECLARE_GAMEPLAY_TAG_EXTERN(Selected);
+    UE_DECLARE_GAMEPLAY_TAG_EXTERN(Unselected);
+    UE_DECLARE_GAMEPLAY_TAG_EXTERN(Used);
+    UE_DECLARE_GAMEPLAY_TAG_EXTERN(PickedUp);
     UE_DECLARE_GAMEPLAY_TAG_EXTERN(Dropped);
     UE_DECLARE_GAMEPLAY_TAG_EXTERN(Added);
     UE_DECLARE_GAMEPLAY_TAG_EXTERN(Removed);
-    UE_DECLARE_GAMEPLAY_TAG_EXTERN(Used);
+
+    // Aliases for backward compatibility
+    UE_DECLARE_GAMEPLAY_TAG_EXTERN(Equipped);
+    UE_DECLARE_GAMEPLAY_TAG_EXTERN(Unequipped);
     UE_DECLARE_GAMEPLAY_TAG_EXTERN(Consumed);
 }
 
@@ -74,6 +79,17 @@ template<> struct TStructOpsTypeTraits<FInventoryArray> : public TStructOpsTypeT
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryChanged);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHotbarSelectionChanged, int32, NewIndex);
 
+/** Delegate signature with standard item action parameters: (ItemData, Quantity, Container, SlotIndex, ItemTags, RelatedActor) */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_SixParams(
+    FOnInventoryItemActionSignature,
+    UInventoryItemData*, ItemData,
+    int32, Quantity,
+    EInventoryContainer, Container,
+    int32, SlotIndex,
+    const FGameplayTagContainer&, ItemTags,
+    AActor*, RelatedActor
+);
+
 /** Unified dynamic multicast delegate for all inventory item events */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_SevenParams(
     FOnInventoryItemEventSignature,
@@ -111,7 +127,35 @@ public:
     UPROPERTY(BlueprintAssignable, Category="Inventory|Events")
     FOnHotbarSelectionChanged OnHotbarSelectionChanged;
 
-    /** Unified event dispatcher for all inventory actions. Use EventTag to differentiate the action (Equipped, Unequipped, Dropped, Added, Removed, Used, Consumed) and ItemTags to differentiate item types. */
+    /** Fired when an item is selected in the hotbar */
+    UPROPERTY(BlueprintAssignable, Category="Inventory|Events")
+    FOnInventoryItemActionSignature OnItemSelected;
+
+    /** Fired when an item is unselected from the hotbar */
+    UPROPERTY(BlueprintAssignable, Category="Inventory|Events")
+    FOnInventoryItemActionSignature OnItemUnselected;
+
+    /** Fired when an item is used / executed */
+    UPROPERTY(BlueprintAssignable, Category="Inventory|Events")
+    FOnInventoryItemActionSignature OnItemUsed;
+
+    /** Fired when an item is picked up from the world */
+    UPROPERTY(BlueprintAssignable, Category="Inventory|Events")
+    FOnInventoryItemActionSignature OnItemPickedUp;
+
+    /** Fired when an item is dropped into the world */
+    UPROPERTY(BlueprintAssignable, Category="Inventory|Events")
+    FOnInventoryItemActionSignature OnItemDropped;
+
+    /** Fired when an item is added to an inventory container */
+    UPROPERTY(BlueprintAssignable, Category="Inventory|Events")
+    FOnInventoryItemActionSignature OnItemAdded;
+
+    /** Fired when an item is removed from an inventory container */
+    UPROPERTY(BlueprintAssignable, Category="Inventory|Events")
+    FOnInventoryItemActionSignature OnItemRemoved;
+
+    /** Unified event dispatcher (fires for all item actions). */
     UPROPERTY(BlueprintAssignable, Category="Inventory|Events")
     FOnInventoryItemEventSignature OnItemEvent;
 
@@ -235,9 +279,13 @@ public:
 
     // --- Hotbar & Item Use / Consumption Actions ---
 
-    // Returns whether the item can be selected/equipped. Items without abilities can still be equipped.
+    // Returns whether the item can be selected in the hotbar.
+    UFUNCTION(BlueprintPure, Category="Inventory|Query", meta=(DisplayName="Can Select Item"))
+    bool CanSelectItem(UInventoryItemData* ItemData) const;
+
+    // Backward-compatible alias for CanSelectItem
     UFUNCTION(BlueprintPure, Category="Inventory|Query")
-    bool CanEquipItem(UInventoryItemData* ItemData) const;
+    bool CanEquipItem(UInventoryItemData* ItemData) const { return CanSelectItem(ItemData); }
 
     // Validates whether the given item data can currently be used by the owner
     UFUNCTION(BlueprintPure, Category="Inventory|Query")
@@ -391,10 +439,7 @@ public:
     UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category="Inventory|World")
     AWorldInventoryItem* SpawnItemInWorld(UInventoryItemData* ItemData, int32 Quantity, FVector Location, FRotator Rotation, FVector Velocity = FVector::ZeroVector);
 
-    // --- Events & Authority Add/Remove ---
-
-    UFUNCTION(BlueprintImplementableEvent, Category="Inventory|Events", meta=(DisplayName="On Inventory Item Consumed"))
-    void BP_OnConsumeInventoryItem(UInventoryItemData* ItemData, int32 ConsumedAmount, int32 RemainingQuantity, AActor* User);
+    // --- Authority Add/Remove ---
 
     UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category="Inventory")
     int32 AddItem(UInventoryItemData* ItemData, int32 Quantity, EInventoryContainer PreferredContainer = EInventoryContainer::Hotbar);
@@ -420,13 +465,13 @@ protected:
     void OnRep_SelectedHotbarIndex();
 
     UPROPERTY()
-    FGameplayAbilitySpecHandle ActiveEquippedAbilityHandle;
+    FGameplayAbilitySpecHandle ActiveSelectedAbilityHandle;
 
     UPROPERTY(Transient)
-    TObjectPtr<UInventoryItemData> LastEquippedItemData = nullptr;
+    TObjectPtr<UInventoryItemData> LastSelectedItemData = nullptr;
 
     UPROPERTY(Transient)
-    int32 LastEquippedSlotIndex = INDEX_NONE;
+    int32 LastSelectedSlotIndex = INDEX_NONE;
 
     void UpdateActiveHotbarAbility();
 
