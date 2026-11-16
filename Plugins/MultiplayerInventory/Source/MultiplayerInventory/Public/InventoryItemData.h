@@ -53,6 +53,9 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Item|Tags")
     FGameplayTagContainer ItemTags;
 
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Tags")
+    FGameplayTag EffectTags;
+
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Item")
     bool bCanBeDropped = true;
 

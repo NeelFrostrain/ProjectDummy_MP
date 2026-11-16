@@ -18,7 +18,7 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Item")
     TObjectPtr<UStaticMeshComponent> Mesh;
 
-    UPROPERTY(ReplicatedUsing=OnRep_ItemData, EditAnywhere, BlueprintReadWrite, Category="Item")
+    UPROPERTY(ReplicatedUsing = OnRep_ItemData, EditAnywhere, BlueprintReadWrite, Category = "Item", meta = (ExposeOnSpawn = "true"))
     TObjectPtr<UInventoryItemData> ItemData;
 
     UPROPERTY(ReplicatedUsing=OnRep_Quantity, EditAnywhere, BlueprintReadWrite, Category="Item", meta=(ClampMin="1"))
