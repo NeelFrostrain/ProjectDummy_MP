@@ -1,6 +1,7 @@
 #include "InventorySlotWidget.h"
 #include "InventoryDragDropOperation.h"
 #include "InventoryItemData.h"
+#include "GameFramework/Pawn.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "Components/Border.h"
